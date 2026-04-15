@@ -1,0 +1,114 @@
+#include "brepkit/mesh.hxx"
+#include "nlohmann/json.hpp"
+
+#include <BRepMesh_IncrementalMesh.hxx>
+#include <BRep_Tool.hxx>
+#include <IFSelect_ReturnStatus.hxx>
+#include <Poly_Triangulation.hxx>
+#include <STEPControl_Reader.hxx>
+#include <TopAbs_ShapeEnum.hxx>
+#include <TopExp_Explorer.hxx>
+#include <TopoDS.hxx>
+#include <TopoDS_Face.hxx>
+#include <TopoDS_Shape.hxx>
+#include <TopLoc_Location.hxx>
+
+#include <cstdlib>
+#include <iostream>
+#include <stdexcept>
+
+namespace brepkit
+{
+
+    static TopoDS_Shape load_step_shape(const std::filesystem::path &step_path)
+    {
+        STEPControl_Reader reader;
+
+        const IFSelect_ReturnStatus status =
+            reader.ReadFile(step_path.string().c_str());
+
+        if (status != IFSelect_RetDone)
+        {
+            throw std::runtime_error("failed to read STEP file");
+        }
+
+        const int root_count = reader.NbRootsForTransfer();
+        if (root_count <= 0)
+        {
+            throw std::runtime_error("STEP file contains no transferable roots");
+        }
+
+        for (int i = 1; i <= root_count; ++i)
+        {
+            reader.TransferRoot(i);
+        }
+
+        TopoDS_Shape shape = reader.OneShape();
+        if (shape.IsNull())
+        {
+            throw std::runtime_error("STEP transfer succeeded but produced no shape");
+        }
+
+        return shape;
+    }
+
+    static MeshStats mesh_stats(const TopoDS_Shape &shape,
+                                double linear_deflection,
+                                double angular_deflection_rad)
+    {
+        // relative = false, parallel = true
+        BRepMesh_IncrementalMesh mesher(
+            shape,
+            linear_deflection,
+            false,
+            angular_deflection_rad,
+            true);
+
+        MeshStats stats{};
+
+        for (TopExp_Explorer ex(shape, TopAbs_FACE); ex.More(); ex.Next())
+        {
+            ++stats.face_count;
+
+            const TopoDS_Face face = TopoDS::Face(ex.Current());
+            TopLoc_Location loc;
+            const Handle(Poly_Triangulation) tri = BRep_Tool::Triangulation(face, loc);
+
+            if (tri.IsNull())
+            {
+                continue;
+            }
+
+            ++stats.triangulated_face_count;
+            stats.triangle_count += static_cast<std::size_t>(tri->NbTriangles());
+            stats.vertex_count += static_cast<std::size_t>(tri->NbNodes());
+        }
+
+        return stats;
+    }
+
+    int run_inspect_step(const std::filesystem::path &step_path,
+                         double linear_deflection,
+                         double angular_deflection_rad)
+    {
+        try
+        {
+            const TopoDS_Shape shape = load_step_shape(step_path);
+            const MeshStats stats = mesh_stats(shape, linear_deflection, angular_deflection_rad);
+
+            std::cout << "file: " << step_path << "\n";
+            std::cout << "faces: " << stats.face_count << "\n";
+            std::cout << "triangulated_faces: " << stats.triangulated_face_count << "\n";
+            std::cout << "triangles: " << stats.triangle_count << "\n";
+            std::cout << "vertices: " << stats.vertex_count << "\n";
+
+            return EXIT_SUCCESS;
+        }
+        catch (const std::exception &e)
+        {
+            std::cerr << "error: " << e.what() << "\n";
+            return EXIT_FAILURE;
+        }
+    }
+
+} // namespace brepkit
