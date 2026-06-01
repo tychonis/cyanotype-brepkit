@@ -1,4 +1,4 @@
-#include "brepkit/mesh.hxx"
+#include "brepkit/mesh.hpp"
 #include "nlohmann/json.hpp"
 
 #include <BRepMesh_IncrementalMesh.hxx>

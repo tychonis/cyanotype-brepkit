@@ -1,5 +1,6 @@
-#include "brepkit/mesh.hxx"
-#include "brepkit/step_export.hxx"
+#include "brepkit/mesh.hpp"
+#include "brepkit/step_export.hpp"
+#include "cyanotype/load.hpp"
 
 #include <cstdlib>
 #include <filesystem>
@@ -48,6 +49,33 @@ namespace
         };
     }
 
+    struct options
+    {
+        std::optional<std::string> map_file;
+    };
+
+    options parse_args(int argc, char **argv)
+    {
+        options opts;
+
+        for (int i = 1; i < argc; ++i)
+        {
+            std::string arg = argv[i];
+
+            if (arg == "--map")
+            {
+                if (i + 1 >= argc)
+                {
+                    throw std::runtime_error("--map requires a file path");
+                }
+
+                opts.map_file = argv[++i];
+            }
+        }
+
+        return opts;
+    }
+
 } // namespace
 
 int main(int argc, char **argv)
@@ -58,17 +86,62 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    const std::string_view cmd = argv[1];
-
-    if (cmd == "inspect")
+    try
     {
-        const std::filesystem::path path = argv[2];
-        const double linear_deflection = (argc >= 4) ? std::stod(argv[3]) : 0.1;
-        const double angular_deflection_rad = (argc >= 5) ? std::stod(argv[4]) : 0.5;
+        const std::string_view cmd = argv[1];
+        const std::filesystem::path input = argv[2];
 
-        return brepkit::run_inspect_step(path, linear_deflection, angular_deflection_rad);
+        if (cmd == "inspect")
+        {
+            if (argc != 3)
+            {
+                print_usage(argv[0]);
+                return EXIT_FAILURE;
+            }
+
+            const std::filesystem::path path = argv[2];
+            const double linear_deflection = (argc >= 4) ? std::stod(argv[3]) : 0.1;
+            const double angular_deflection_rad = (argc >= 5) ? std::stod(argv[4]) : 0.5;
+
+            return brepkit::run_inspect_step(path, linear_deflection, angular_deflection_rad);
+        }
+
+        if (cmd == "export")
+        {
+            if (argc < 4)
+            {
+                print_usage(argv[0]);
+                return EXIT_FAILURE;
+            }
+            const std::filesystem::path out_dir = argv[3];
+
+            brepkit::ExportOptions exportOpts = {
+                .profiles = default_profiles()};
+
+            auto opts = parse_args(argc, argv);
+
+            std::map<std::string, std::string> digest_map_storage;
+            if (opts.map_file)
+            {
+                digest_map_storage = cyanotype::load_digest_map(*opts.map_file);
+                exportOpts.digest_map = &digest_map_storage;
+            }
+
+            const brepkit::ExportManifest manifest =
+                brepkit::export_step_hierarchy_glbs(input, out_dir, exportOpts);
+
+            std::cout << "exported " << manifest.nodes.size()
+                      << " hierarchy nodes into " << out_dir << "\n";
+
+            return EXIT_SUCCESS;
+        }
+
+        print_usage(argv[0]);
+        return EXIT_FAILURE;
     }
-
-    print_usage(argv[0]);
-    return EXIT_FAILURE;
+    catch (const std::exception &e)
+    {
+        std::cerr << "error: " << e.what() << "\n";
+        return EXIT_FAILURE;
+    }
 }

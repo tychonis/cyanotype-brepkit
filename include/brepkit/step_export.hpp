@@ -4,10 +4,10 @@
 #include <filesystem>
 #include <string>
 #include <vector>
+#include <map>
 
 namespace brepkit
 {
-
     struct TessellationProfile
     {
         std::string name;          // e.g. "coarse", "medium", "fine"
@@ -16,6 +16,12 @@ namespace brepkit
         bool relative = false;
         bool parallel = true;
         bool merge_faces = true;
+    };
+
+    struct ExportOptions
+    {
+        std::vector<TessellationProfile> profiles;
+        const std::map<std::string, std::string> *digest_map = nullptr;
     };
 
     struct ExportedGlb
@@ -43,6 +49,6 @@ namespace brepkit
     ExportManifest export_step_hierarchy_glbs(
         const std::filesystem::path &step_file,
         const std::filesystem::path &out_dir,
-        const std::vector<TessellationProfile> &profiles);
+        const ExportOptions &opts);
 
 } // namespace brepkit

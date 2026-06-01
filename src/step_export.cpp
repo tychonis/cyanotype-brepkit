@@ -1,5 +1,5 @@
 // step_export.cpp
-#include "brepkit/step_export.hxx"
+#include "brepkit/step_export.hpp"
 
 #include <BRepMesh_IncrementalMesh.hxx>
 #include <IFSelect_ReturnStatus.hxx>
@@ -58,7 +58,7 @@ namespace brepkit
 
         std::string node_id_from_label(const TDF_Label &label)
         {
-            return sanitize_id(label_entry_string(label));
+            return label_entry_string(label);
         }
 
         Handle(TDocStd_Document) make_xde_document()
@@ -129,7 +129,8 @@ namespace brepkit
         void walk_label(
             WalkCtx &ctx,
             const TDF_Label &label,
-            const std::string &parent_id)
+            const std::string &parent_id,
+            const std::map<std::string, std::string> *digest_map)
         {
             const std::string node_id = node_id_from_label(label);
             const bool is_assembly = ctx.shape_tool->IsAssembly(label);
@@ -145,10 +146,19 @@ namespace brepkit
             {
                 for (const TessellationProfile &profile : ctx.profiles)
                 {
+                    std::string filename = sanitize_id(node_id);
+                    if (digest_map != nullptr)
+                    {
+                        auto it = digest_map->find(node_id);
+                        if (it != digest_map->end())
+                        {
+                            filename = it->second;
+                        }
+                    }
                     const std::filesystem::path rel =
                         std::filesystem::path("meshes") /
                         profile.name /
-                        (node_id + ".glb");
+                        (filename + ".glb");
                     const std::filesystem::path abs = ctx.out_dir / rel;
 
                     std::filesystem::create_directories(abs.parent_path());
@@ -167,7 +177,7 @@ namespace brepkit
             {
                 for (int i = 1; i <= children.Length(); ++i)
                 {
-                    walk_label(ctx, children.Value(i), node_id);
+                    walk_label(ctx, children.Value(i), node_id, digest_map);
                 }
             }
         }
@@ -177,9 +187,9 @@ namespace brepkit
     ExportManifest export_step_hierarchy_glbs(
         const std::filesystem::path &step_file,
         const std::filesystem::path &out_dir,
-        const std::vector<TessellationProfile> &profiles)
+        const ExportOptions &opts)
     {
-        if (profiles.empty())
+        if (opts.profiles.empty())
         {
             throw std::invalid_argument("profiles must not be empty");
         }
@@ -193,7 +203,7 @@ namespace brepkit
             .source_doc = doc,
             .shape_tool = shape_tool,
             .out_dir = out_dir,
-            .profiles = profiles,
+            .profiles = opts.profiles,
             .manifest = ExportManifest{
                 .source_step = step_file,
                 .out_dir = out_dir,
@@ -204,7 +214,7 @@ namespace brepkit
 
         for (int i = 1; i <= free_shapes.Length(); ++i)
         {
-            walk_label(ctx, free_shapes.Value(i), "");
+            walk_label(ctx, free_shapes.Value(i), "", opts.digest_map);
         }
 
         return ctx.manifest;
