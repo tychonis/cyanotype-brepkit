@@ -17,8 +17,14 @@
 #include <XCAFDoc_DocumentTool.hxx>
 #include <XCAFDoc_ShapeTool.hxx>
 #include <STEPCAFControl_Reader.hxx>
+#include <TDataStd_Name.hxx>
 
 #include <stdexcept>
+
+namespace
+{
+    Handle(XCAFDoc_ShapeTool) g_shape_tool;
+}
 
 namespace brepkit
 {
@@ -37,10 +43,39 @@ namespace brepkit
             ExportManifest manifest;
         };
 
+        std::string label_name(const TDF_Label &label)
+        {
+            Handle(TDataStd_Name) nameAttr;
+            if (!label.FindAttribute(TDataStd_Name::GetID(), nameAttr))
+                return "";
+
+            const TCollection_ExtendedString &name = nameAttr->Get();
+
+            std::vector<char> buf(name.LengthOfCString() + 1, '\0');
+            Standard_PCharacter p = buf.data();
+            name.ToUTF8CString(p);
+
+            return std::string(buf.data());
+        }
+
+        std::string effective_label_name(
+            const TDF_Label &label)
+        {
+            TDF_Label referred;
+            if (g_shape_tool->GetReferredShape(label, referred))
+            {
+                return label_name(referred);
+            }
+
+            return "";
+        }
+
         std::string label_entry_string(const TDF_Label &label)
         {
             OcctString entry;
             TDF_Tool::Entry(label, entry);
+            std::cout << entry.ToCString() << "--" << label_name(label)
+                      << "--" << effective_label_name(label) << "\n";
             return entry.ToCString();
         }
 
@@ -106,6 +141,7 @@ namespace brepkit
 
             Handle(TDocStd_Document) temp_doc = make_xde_document();
             Handle(XCAFDoc_ShapeTool) temp_shapes = XCAFDoc_DocumentTool::ShapeTool(temp_doc->Main());
+            g_shape_tool = temp_shapes;
 
             // Treat compound as a whole here; this avoids unexpectedly exploding structure
             // inside each per-node export.
