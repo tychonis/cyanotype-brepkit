@@ -162,6 +162,15 @@ namespace brepkit
             }
         }
 
+        std::filesystem::path get_export_path(
+            const TessellationProfile &profile,
+            const std::string &filename)
+        {
+            return std::filesystem::path("meshes") /
+                   profile.name /
+                   (filename + ".glb");
+        }
+
         void walk_label(
             WalkCtx &ctx,
             const TDF_Label &label,
@@ -191,10 +200,7 @@ namespace brepkit
                             filename = it->second;
                         }
                     }
-                    const std::filesystem::path rel =
-                        std::filesystem::path("meshes") /
-                        profile.name /
-                        (filename + ".glb");
+                    const std::filesystem::path rel = get_export_path(profile, filename);
                     const std::filesystem::path abs = ctx.out_dir / rel;
 
                     std::filesystem::create_directories(abs.parent_path());

@@ -78,6 +78,51 @@ namespace
 
 } // namespace
 
+int cmd_inspect(int argc, char **argv)
+{
+    if (argc != 3)
+    {
+        print_usage(argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    const std::filesystem::path path = argv[2];
+    const double linear_deflection = (argc >= 4) ? std::stod(argv[3]) : 0.1;
+    const double angular_deflection_rad = (argc >= 5) ? std::stod(argv[4]) : 0.5;
+
+    return brepkit::run_inspect_step(path, linear_deflection, angular_deflection_rad);
+}
+
+int cmd_export_all(int argc, char **argv)
+{
+    if (argc < 4)
+    {
+        print_usage(argv[0]);
+        return EXIT_FAILURE;
+    }
+    const std::filesystem::path out_dir = argv[3];
+
+    brepkit::ExportOptions exportOpts = {
+        .profiles = default_profiles()};
+
+    auto opts = parse_args(argc, argv);
+
+    std::map<std::string, std::string> digest_map_storage;
+    if (opts.map_file)
+    {
+        digest_map_storage = cyanotype::load_digest_map(*opts.map_file);
+        exportOpts.digest_map = &digest_map_storage;
+    }
+
+    const brepkit::ExportManifest manifest =
+        brepkit::export_step_hierarchy_glbs(argv[2], out_dir, exportOpts);
+
+    std::cout << "exported " << manifest.nodes.size()
+              << " hierarchy nodes into " << out_dir << "\n";
+
+    return EXIT_SUCCESS;
+}
+
 int main(int argc, char **argv)
 {
     if (argc < 3)
@@ -93,47 +138,12 @@ int main(int argc, char **argv)
 
         if (cmd == "inspect")
         {
-            if (argc != 3)
-            {
-                print_usage(argv[0]);
-                return EXIT_FAILURE;
-            }
-
-            const std::filesystem::path path = argv[2];
-            const double linear_deflection = (argc >= 4) ? std::stod(argv[3]) : 0.1;
-            const double angular_deflection_rad = (argc >= 5) ? std::stod(argv[4]) : 0.5;
-
-            return brepkit::run_inspect_step(path, linear_deflection, angular_deflection_rad);
+            return cmd_inspect(argc, argv);
         }
 
         if (cmd == "export")
         {
-            if (argc < 4)
-            {
-                print_usage(argv[0]);
-                return EXIT_FAILURE;
-            }
-            const std::filesystem::path out_dir = argv[3];
-
-            brepkit::ExportOptions exportOpts = {
-                .profiles = default_profiles()};
-
-            auto opts = parse_args(argc, argv);
-
-            std::map<std::string, std::string> digest_map_storage;
-            if (opts.map_file)
-            {
-                digest_map_storage = cyanotype::load_digest_map(*opts.map_file);
-                exportOpts.digest_map = &digest_map_storage;
-            }
-
-            const brepkit::ExportManifest manifest =
-                brepkit::export_step_hierarchy_glbs(input, out_dir, exportOpts);
-
-            std::cout << "exported " << manifest.nodes.size()
-                      << " hierarchy nodes into " << out_dir << "\n";
-
-            return EXIT_SUCCESS;
+            return cmd_export_all(argc, argv);
         }
 
         print_usage(argv[0]);
