@@ -171,6 +171,24 @@ namespace brepkit
                    (filename + ".glb");
         }
 
+        void export_label(
+            WalkCtx &ctx,
+            const TessellationProfile &profile,
+            const TDF_Label &label,
+            const std::string &filename)
+        {
+            const std::string node_id = node_id_from_label(label);
+            const TopoDS_Shape shape = XCAFDoc_ShapeTool::GetShape(label);
+
+            if (!shape.IsNull())
+            {
+                const std::filesystem::path abs = ctx.out_dir / (filename + ".glb");
+
+                std::filesystem::create_directories(abs.parent_path());
+                export_single_shape_glb(shape, abs, profile);
+            }
+        }
+
         void walk_label(
             WalkCtx &ctx,
             const TDF_Label &label,
@@ -223,8 +241,7 @@ namespace brepkit
                 }
             }
         }
-
-    } // namespace
+    }
 
     ExportManifest export_step_hierarchy_glbs(
         const std::filesystem::path &step_file,
@@ -257,6 +274,45 @@ namespace brepkit
         for (int i = 1; i <= free_shapes.Length(); ++i)
         {
             walk_label(ctx, free_shapes.Value(i), "", opts.digest_map);
+        }
+
+        return ctx.manifest;
+    }
+
+    ExportManifest export_glb(
+        const std::filesystem::path &step_file,
+        const std::filesystem::path &out_dir,
+        const ExportOptions &opts)
+    {
+        if (opts.profiles.empty())
+        {
+            throw std::invalid_argument("profiles must not be empty");
+        }
+
+        std::filesystem::create_directories(out_dir);
+
+        Handle(TDocStd_Document) doc = load_step_xde(step_file);
+        Handle(XCAFDoc_ShapeTool) shape_tool = XCAFDoc_DocumentTool::ShapeTool(doc->Main());
+
+        TessellationProfile profile = opts.profiles[0];
+        std::string filename = step_file.filename();
+
+        WalkCtx ctx{
+            .source_doc = doc,
+            .shape_tool = shape_tool,
+            .out_dir = out_dir,
+            .profiles = opts.profiles,
+            .manifest = ExportManifest{
+                .source_step = step_file,
+                .out_dir = out_dir,
+                .nodes = {}}};
+
+        LabelSeq free_shapes;
+        shape_tool->GetFreeShapes(free_shapes);
+
+        for (int i = 1; i <= free_shapes.Length(); ++i)
+        {
+            export_label(ctx, profile, free_shapes.Value(i), filename + std::to_string(i));
         }
 
         return ctx.manifest;

@@ -51,4 +51,9 @@ namespace brepkit
         const std::filesystem::path &out_dir,
         const ExportOptions &opts);
 
+    ExportManifest export_glb(
+        const std::filesystem::path &step_file,
+        const std::filesystem::path &out_dir,
+        const ExportOptions &opts);
+
 } // namespace brepkit

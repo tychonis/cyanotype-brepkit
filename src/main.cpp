@@ -123,6 +123,36 @@ int cmd_export_all(int argc, char **argv)
     return EXIT_SUCCESS;
 }
 
+int cmd_export(int argc, char **argv)
+{
+    if (argc < 4)
+    {
+        print_usage(argv[0]);
+        return EXIT_FAILURE;
+    }
+    const std::filesystem::path out_dir = argv[3];
+
+    brepkit::ExportOptions exportOpts = {
+        .profiles = default_profiles()};
+
+    auto opts = parse_args(argc, argv);
+
+    std::map<std::string, std::string> digest_map_storage;
+    if (opts.map_file)
+    {
+        digest_map_storage = cyanotype::load_digest_map(*opts.map_file);
+        exportOpts.digest_map = &digest_map_storage;
+    }
+
+    const brepkit::ExportManifest manifest =
+        brepkit::export_glb(argv[2], out_dir, exportOpts);
+
+    std::cout << "exported " << manifest.nodes.size()
+              << " hierarchy nodes into " << out_dir << "\n";
+
+    return EXIT_SUCCESS;
+}
+
 int main(int argc, char **argv)
 {
     if (argc < 3)
@@ -142,6 +172,11 @@ int main(int argc, char **argv)
         }
 
         if (cmd == "export")
+        {
+            return cmd_export(argc, argv);
+        }
+
+        if (cmd == "export_all")
         {
             return cmd_export_all(argc, argv);
         }

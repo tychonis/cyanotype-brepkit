@@ -31,10 +31,11 @@ target_include_directories(brepkit
 # We ask for the toolkits we actually use.
 find_package(OpenCASCADE REQUIRED)
 
+target_include_directories(brepkit SYSTEM PRIVATE ${OpenCASCADE_INCLUDE_DIR})
+
 message(STATUS "OpenCASCADE_INCLUDE_DIR=${OpenCASCADE_INCLUDE_DIR}")
 message(STATUS "OpenCASCADE_LIBRARIES=${OpenCASCADE_LIBRARIES}")
 
-target_include_directories(brepkit SYSTEM PRIVATE ${OpenCASCADE_INCLUDE_DIR})
 target_link_libraries(brepkit PRIVATE ${OpenCASCADE_LIBRARIES})
 
 if (MSVC)
@@ -43,7 +44,7 @@ if (MSVC)
         target_compile_options(brepkit PRIVATE /WX)
     endif()
 else()
-    target_compile_options(brepkit PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(brepkit PRIVATE -Wall -Wextra -Wpedantic -Wno-extra-semi)
     if (OCCT_CLI_WARNINGS_AS_ERRORS)
         target_compile_options(brepkit PRIVATE -Werror)
     endif()
