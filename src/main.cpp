@@ -1,5 +1,6 @@
 #include "brepkit/mesh.hpp"
-#include "brepkit/step_export.hpp"
+#include "brepkit/step.hpp"
+#include "brepkit/brp.hpp"
 #include "cyanotype/load.hpp"
 
 #include <cstdlib>
@@ -153,6 +154,30 @@ int cmd_export(int argc, char **argv)
     return EXIT_SUCCESS;
 }
 
+int cmd_location(int argc, char **argv)
+{
+    if (argc != 3)
+    {
+        print_usage(argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    const std::filesystem::path path = argv[2];
+
+    try
+    {
+        const brepkit::Placement placement = brepkit::ReadTopLevelPlacement(path);
+        std::cout << brepkit::SerializePlacement(placement) << "\n";
+
+        return EXIT_SUCCESS;
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << "error: " << e.what() << "\n";
+        return EXIT_FAILURE;
+    }
+}
+
 int main(int argc, char **argv)
 {
     if (argc < 3)
@@ -174,6 +199,11 @@ int main(int argc, char **argv)
         if (cmd == "export")
         {
             return cmd_export(argc, argv);
+        }
+
+        if (cmd == "location")
+        {
+            return cmd_location(argc, argv);
         }
 
         if (cmd == "export_all")

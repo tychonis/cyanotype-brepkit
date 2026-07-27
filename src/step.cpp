@@ -1,5 +1,5 @@
 // step_export.cpp
-#include "brepkit/step_export.hpp"
+#include "brepkit/step.hpp"
 
 #include <BRepMesh_IncrementalMesh.hxx>
 #include <IFSelect_ReturnStatus.hxx>
