@@ -2,6 +2,8 @@
 #include <BRepTools.hxx>
 #include <TopLoc_Location.hxx>
 #include <TopoDS_Shape.hxx>
+#include <NCollection_IndexedMap.hxx>
+#include <TopExp.hxx>
 #include <gp_Quaternion.hxx>
 #include <gp_Trsf.hxx>
 #include <gp_XYZ.hxx>
@@ -12,6 +14,8 @@
 
 namespace brepkit
 {
+    using ShapeMap =
+        NCollection_IndexedMap<TopoDS_Shape, TopTools_ShapeMapHasher>;
     struct Placement
     {
         double tx, ty, tz;
@@ -56,5 +60,131 @@ namespace brepkit
     void ClearTopLevelPlacement(TopoDS_Shape &shape)
     {
         shape.Location(TopLoc_Location());
+    }
+
+    std::size_t CountDistinctLocations(const std::string &path)
+    {
+        BRep_Builder builder;
+        TopoDS_Shape root;
+        if (!BRepTools::Read(root, path.c_str(), builder))
+        {
+            throw std::runtime_error("Failed to read BREP: " + path);
+        }
+
+        ShapeMap shapes;
+        TopExp::MapShapes(root, shapes);
+
+        std::vector<TopLoc_Location> locations;
+
+        for (int i = 1; i <= shapes.Extent(); ++i)
+        {
+            const auto &loc = shapes(i).Location();
+
+            bool found = false;
+            for (const auto &existing : locations)
+            {
+                if (loc.IsEqual(existing))
+                {
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found)
+                locations.push_back(loc);
+        }
+
+        return locations.size();
+    }
+
+    void InspectLocations(const std::string &path)
+    {
+        BRep_Builder builder;
+        TopoDS_Shape root;
+        if (!BRepTools::Read(root, path.c_str(), builder))
+        {
+            throw std::runtime_error("Failed to read BREP: " + path);
+        }
+
+        ShapeMap shapes;
+        TopExp::MapShapes(root, shapes);
+
+        struct Group
+        {
+            TopLoc_Location location;
+            int count = 0;
+            int rootCount = 0;
+            int identityCount = 0;
+        };
+
+        std::vector<Group> groups;
+
+        for (int i = 1; i <= shapes.Extent(); ++i)
+        {
+            const TopoDS_Shape &shape = shapes(i);
+            const TopLoc_Location &loc = shape.Location();
+
+            auto it = std::find_if(
+                groups.begin(),
+                groups.end(),
+                [&](const Group &g)
+                { return loc.IsEqual(g.location); });
+
+            if (it == groups.end())
+            {
+                groups.push_back({loc});
+                it = std::prev(groups.end());
+            }
+
+            ++it->count;
+
+            if (shape.IsSame(root))
+                ++it->rootCount;
+
+            if (loc.IsIdentity())
+                ++it->identityCount;
+        }
+
+        for (std::size_t i = 0; i < groups.size(); ++i)
+        {
+            std::cout
+                << "location " << i
+                << ": count=" << groups[i].count
+                << ", root=" << groups[i].rootCount
+                << ", identity=" << groups[i].identityCount
+                << '\n';
+        }
+    }
+
+    Placement Canonicalize(const std::string &input_path, const std::string &output_path)
+    {
+        BRep_Builder builder;
+        TopoDS_Shape root;
+        if (!BRepTools::Read(root, input_path.c_str(), builder))
+        {
+            throw std::runtime_error("Failed to read BREP: " + input_path);
+        }
+
+        const gp_Trsf trsf = root.Location().Transformation();
+        const gp_XYZ t = trsf.TranslationPart();
+        const gp_Quaternion q = trsf.GetRotation();
+
+        const Placement ret = {
+            .tx = t.X(),
+            .ty = t.Y(),
+            .tz = t.Z(),
+            .qx = q.X(),
+            .qy = q.Y(),
+            .qz = q.Z(),
+            .qw = q.W(),
+        };
+        root = root.Located(TopLoc_Location());
+
+        if (!BRepTools::Write(root, output_path.c_str()))
+        {
+            throw std::runtime_error("Failed to write BREP: " + output_path);
+        }
+
+        return ret;
     }
 } // namespace brepkit

@@ -178,6 +178,77 @@ int cmd_location(int argc, char **argv)
     }
 }
 
+int cmd_count(int argc, char **argv)
+{
+    if (argc != 3)
+    {
+        print_usage(argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    const std::filesystem::path path = argv[2];
+
+    try
+    {
+        const std::size_t count = brepkit::CountDistinctLocations(path);
+        std::cout << count << "\n";
+
+        return EXIT_SUCCESS;
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << "error: " << e.what() << "\n";
+        return EXIT_FAILURE;
+    }
+}
+
+int cmd_inspect_locations(int argc, char **argv)
+{
+    if (argc != 3)
+    {
+        print_usage(argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    const std::filesystem::path path = argv[2];
+
+    try
+    {
+        brepkit::InspectLocations(path);
+        return EXIT_SUCCESS;
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << "error: " << e.what() << "\n";
+        return EXIT_FAILURE;
+    }
+}
+
+int cmd_canonicalize(int argc, char **argv)
+{
+    if (argc != 4)
+    {
+        print_usage(argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    const std::filesystem::path input_path = argv[2];
+    const std::filesystem::path output_path = argv[3];
+
+    try
+    {
+        brepkit::Placement placement = brepkit::Canonicalize(input_path.string(), output_path.string());
+        std::cout << brepkit::SerializePlacement(placement) << "\n";
+
+        return EXIT_SUCCESS;
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << "error: " << e.what() << "\n";
+        return EXIT_FAILURE;
+    }
+}
+
 int main(int argc, char **argv)
 {
     if (argc < 3)
@@ -204,6 +275,21 @@ int main(int argc, char **argv)
         if (cmd == "location")
         {
             return cmd_location(argc, argv);
+        }
+
+        if (cmd == "count")
+        {
+            return cmd_count(argc, argv);
+        }
+
+        if (cmd == "inspect_locations")
+        {
+            return cmd_inspect_locations(argc, argv);
+        }
+
+        if (cmd == "canonicalize")
+        {
+            return cmd_canonicalize(argc, argv);
         }
 
         if (cmd == "export_all")
