@@ -17,4 +17,5 @@ namespace brepkit
     std::size_t CountDistinctLocations(const std::string &path);
     void InspectLocations(const std::string &path);
     Placement Canonicalize(const std::string &input_path, const std::string &output_path);
+    void BrpToGlb(const std::string &input_path, const std::string &output_path, const TessellationProfile &profile);
 } // namespace brepkit

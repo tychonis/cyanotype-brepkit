@@ -249,6 +249,29 @@ int cmd_canonicalize(int argc, char **argv)
     }
 }
 
+int cmd_glb(int argc, char **argv)
+{
+    if (argc < 4)
+    {
+        print_usage(argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    const std::string input_file = argv[2];
+    const std::string output_file = argv[3];
+
+    try
+    {
+        brepkit::BrpToGlb(input_file, output_file, default_profiles()[0]);
+        return EXIT_SUCCESS;
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << "error: " << e.what() << "\n";
+        return EXIT_FAILURE;
+    }
+}
+
 int main(int argc, char **argv)
 {
     if (argc < 3)
@@ -295,6 +318,11 @@ int main(int argc, char **argv)
         if (cmd == "export_all")
         {
             return cmd_export_all(argc, argv);
+        }
+
+        if (cmd == "glb")
+        {
+            return cmd_glb(argc, argv);
         }
 
         print_usage(argv[0]);

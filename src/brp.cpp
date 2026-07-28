@@ -7,7 +7,15 @@
 #include <gp_Quaternion.hxx>
 #include <gp_Trsf.hxx>
 #include <gp_XYZ.hxx>
+#include <BRepMesh_IncrementalMesh.hxx>
+#include <TDocStd_Document.hxx>
+#include <XCAFApp_Application.hxx>
+#include <XCAFDoc_DocumentTool.hxx>
+#include <XCAFDoc_ShapeTool.hxx>
+#include <TDataStd_Name.hxx>
+#include <RWGltf_CafWriter.hxx>
 
+#include <brepkit/step.hpp>
 #include <nlohmann/json.hpp>
 #include <stdexcept>
 #include <string>
@@ -186,5 +194,55 @@ namespace brepkit
         }
 
         return ret;
+    }
+
+    void BrpToGlb(
+        const std::string &input_path,
+        const std::string &output_path,
+        const TessellationProfile &profile)
+    {
+        BRep_Builder builder;
+        TopoDS_Shape shape;
+
+        if (!BRepTools::Read(shape, input_path.c_str(), builder))
+        {
+            throw std::runtime_error("Failed to read BREP: " + input_path);
+        }
+
+        BRepMesh_IncrementalMesh mesher(
+            shape,
+            profile.linear_deflection,
+            profile.relative,
+            profile.angular_deflection,
+            profile.parallel);
+
+        mesher.Perform();
+
+        if (!mesher.IsDone())
+        {
+            throw std::runtime_error("Failed to tessellate BREP: " + input_path);
+        }
+
+        Handle(TDocStd_Document) document =
+            new TDocStd_Document("XmlXCAF");
+
+        Handle(XCAFDoc_ShapeTool) shape_tool =
+            XCAFDoc_DocumentTool::ShapeTool(document->Main());
+
+        const TDF_Label label = shape_tool->AddShape(shape, false);
+        TDataStd_Name::Set(label, "shape");
+
+        RWGltf_CafWriter writer(output_path.c_str(), true); // true = binary GLB
+        writer.SetMergeFaces(profile.merge_faces);
+
+        NCollection_IndexedDataMap<TCollection_AsciiString, TCollection_AsciiString> metadata;
+
+        if (!writer.Perform(
+                document,
+                metadata,
+                Message_ProgressRange()))
+        {
+            throw std::runtime_error("Failed to write GLB: " + output_path);
+        }
     }
 } // namespace brepkit
