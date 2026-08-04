@@ -22,14 +22,6 @@
 
 namespace brepkit
 {
-    using ShapeMap =
-        NCollection_IndexedMap<TopoDS_Shape, TopTools_ShapeMapHasher>;
-    struct Placement
-    {
-        double tx, ty, tz;
-        double qx, qy, qz, qw;
-    };
-
     std::string SerializePlacement(const Placement &p)
     {
         nlohmann::json j = {

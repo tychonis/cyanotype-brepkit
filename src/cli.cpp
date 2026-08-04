@@ -19,7 +19,6 @@
 
 namespace brepkit
 {
-
     static TopoDS_Shape load_step_shape(const std::filesystem::path &step_path)
     {
         STEPControl_Reader reader;
@@ -96,11 +95,21 @@ namespace brepkit
             const TopoDS_Shape shape = load_step_shape(step_path);
             const MeshStats stats = mesh_stats(shape, linear_deflection, angular_deflection_rad);
 
+            NCollection_Sequence<TCollection_AsciiString> lengthUnits;
+            NCollection_Sequence<TCollection_AsciiString> angleUnits;
+            NCollection_Sequence<TCollection_AsciiString> solidAngleUnits;
+            STEPControl_Reader reader;
+            reader.ReadFile(step_path.string().c_str());
+
+            reader.FileUnits(lengthUnits, angleUnits, solidAngleUnits);
+            std::string unit = lengthUnits.Value(1).ToCString();
+
             std::cout << "file: " << step_path << "\n";
             std::cout << "faces: " << stats.face_count << "\n";
             std::cout << "triangulated_faces: " << stats.triangulated_face_count << "\n";
             std::cout << "triangles: " << stats.triangle_count << "\n";
             std::cout << "vertices: " << stats.vertex_count << "\n";
+            std::cout << "unit: " << unit << "\n";
 
             return EXIT_SUCCESS;
         }

@@ -6,18 +6,10 @@
 #include <vector>
 #include <map>
 
+#include <brepkit/type.hpp>
+
 namespace brepkit
 {
-    struct TessellationProfile
-    {
-        std::string name;          // e.g. "coarse", "medium", "fine"
-        double linear_deflection;  // e.g. 1.0, 0.2, 0.05
-        double angular_deflection; // radians, e.g. 0.5
-        bool relative = false;
-        bool parallel = true;
-        bool merge_faces = true;
-    };
-
     struct ExportOptions
     {
         std::vector<TessellationProfile> profiles;

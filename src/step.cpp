@@ -30,10 +30,6 @@ namespace brepkit
 {
     namespace
     {
-        using OcctString = TCollection_AsciiString;
-        using StringMap = NCollection_IndexedDataMap<OcctString, OcctString>;
-        using LabelSeq = NCollection_Sequence<TDF_Label>;
-
         struct WalkCtx
         {
             Handle(TDocStd_Document) source_doc;
