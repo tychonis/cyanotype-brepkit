@@ -226,6 +226,8 @@ namespace brepkit
 
         RWGltf_CafWriter writer(output_path.c_str(), true); // true = binary GLB
         writer.SetMergeFaces(profile.merge_faces);
+        auto &converter = writer.ChangeCoordinateSystemConverter();
+        converter.SetInputLengthUnit(0.001); // millimeters
 
         NCollection_IndexedDataMap<TCollection_AsciiString, TCollection_AsciiString> metadata;
 

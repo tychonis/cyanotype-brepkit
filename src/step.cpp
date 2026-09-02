@@ -148,6 +148,8 @@ namespace brepkit
             writer.SetMergeFaces(profile.merge_faces);
             writer.SetParallel(profile.parallel);
             writer.SetTransformationFormat(RWGltf_WriterTrsfFormat_Compact);
+            auto &converter = writer.ChangeCoordinateSystemConverter();
+            converter.SetInputLengthUnit(0.001); // millimeters
 
             StringMap file_info;
             file_info.Add("generator", "brepkit");
