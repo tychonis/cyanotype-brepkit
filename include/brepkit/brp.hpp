@@ -13,4 +13,5 @@ namespace brepkit
     void InspectLocations(const std::string &path);
     Placement Canonicalize(const std::string &input_path, const std::string &output_path);
     void BrpToGlb(const std::string &input_path, const std::string &output_path, const TessellationProfile &profile);
+    void CysceneToGlb(const std::string &input_path, const std::string &output_path, const TessellationProfile &profile);
 } // namespace brepkit

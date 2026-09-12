@@ -262,7 +262,24 @@ int cmd_glb(int argc, char **argv)
 
     try
     {
-        brepkit::BrpToGlb(input_file, output_file, default_profiles()[0]);
+        const auto ext = std::filesystem::path(input_file).extension();
+
+        if (ext == ".brp")
+        {
+            brepkit::BrpToGlb(
+                input_file, output_file, default_profiles()[0]);
+        }
+        else if (ext == ".cyscene")
+        {
+            brepkit::CysceneToGlb(
+                input_file, output_file, default_profiles()[0]);
+        }
+        else
+        {
+            throw std::runtime_error(
+                "Unsupported input format: " + ext.string());
+        }
+
         return EXIT_SUCCESS;
     }
     catch (const std::exception &e)
