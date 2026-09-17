@@ -261,6 +261,10 @@ namespace brepkit
         Handle(XCAFDoc_ShapeTool) shape_tool =
             XCAFDoc_DocumentTool::ShapeTool(document->Main());
 
+        BRep_Builder builder;
+        TopoDS_Compound compound;
+        builder.MakeCompound(compound);
+
         for (const auto &object : scene.at("objects"))
         {
             std::string source = object.at("source");
@@ -273,28 +277,11 @@ namespace brepkit
 
             const std::filesystem::path brep_path = source;
 
-            BRep_Builder builder;
             TopoDS_Shape shape;
-
             if (!BRepTools::Read(shape, brep_path.string().c_str(), builder))
             {
                 throw std::runtime_error(
                     "Failed to read BREP: " + brep_path.string());
-            }
-
-            BRepMesh_IncrementalMesh mesher(
-                shape,
-                profile.linear_deflection,
-                profile.relative,
-                profile.angular_deflection,
-                profile.parallel);
-
-            mesher.Perform();
-
-            if (!mesher.IsDone())
-            {
-                throw std::runtime_error(
-                    "Failed to tessellate BREP: " + brep_path.string());
             }
 
             const auto &placement = object.at("placement");
@@ -316,17 +303,31 @@ namespace brepkit
 
             shape.Location(TopLoc_Location(transform));
 
-            const TDF_Label label = shape_tool->AddShape(shape, false);
-            TDataStd_Name::Set(
-                label,
-                brep_path.filename().string().c_str());
+            builder.Add(compound, shape);
         }
+
+        BRepMesh_IncrementalMesh mesher(
+            compound,
+            profile.linear_deflection,
+            profile.relative,
+            profile.angular_deflection,
+            profile.parallel);
+
+        mesher.Perform();
+
+        if (!mesher.IsDone())
+        {
+            throw std::runtime_error("Failed to tessellate scene");
+        }
+
+        const TDF_Label label = shape_tool->AddShape(compound, false);
+        TDataStd_Name::Set(label, "scene");
 
         RWGltf_CafWriter writer(output_path.c_str(), true);
         writer.SetMergeFaces(profile.merge_faces);
 
         auto &converter = writer.ChangeCoordinateSystemConverter();
-        converter.SetInputLengthUnit(0.001); // BREP/document coordinates are mm
+        converter.SetInputLengthUnit(0.001);
 
         NCollection_IndexedDataMap<
             TCollection_AsciiString,
