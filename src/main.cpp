@@ -1,6 +1,7 @@
 #include "brepkit/mesh.hpp"
 #include "brepkit/step.hpp"
 #include "brepkit/brp.hpp"
+#include "brepkit/cyscene.hpp"
 #include "cyanotype/load.hpp"
 
 #include <cstdlib>

@@ -13,6 +13,7 @@ add_executable(brepkit
     src/cli.cpp
     src/step.cpp
     src/brp.cpp
+    src/cyscene.cpp
 )
 
 target_include_directories(brepkit

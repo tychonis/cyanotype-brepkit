@@ -15,7 +15,7 @@
 #include <TDataStd_Name.hxx>
 #include <RWGltf_CafWriter.hxx>
 
-#include <brepkit/step.hpp>
+#include <brepkit/type.hpp>
 #include <nlohmann/json.hpp>
 #include <stdexcept>
 #include <string>
@@ -240,107 +240,17 @@ namespace brepkit
         }
     }
 
-    void CysceneToGlb(
-        const std::string &input_path,
-        const std::string &output_path,
-        const TessellationProfile &profile)
+    TopoDS_Shape LoadBrep(const std::filesystem::path &path)
     {
-        using json = nlohmann::json;
-
-        std::ifstream stream(input_path);
-        if (!stream)
-        {
-            throw std::runtime_error("Failed to read scene: " + input_path);
-        }
-
-        const json scene = json::parse(stream);
-
-        Handle(TDocStd_Document) document =
-            new TDocStd_Document("XmlXCAF");
-
-        Handle(XCAFDoc_ShapeTool) shape_tool =
-            XCAFDoc_DocumentTool::ShapeTool(document->Main());
-
         BRep_Builder builder;
-        TopoDS_Compound compound;
-        builder.MakeCompound(compound);
+        TopoDS_Shape shape;
 
-        for (const auto &object : scene.at("objects"))
-        {
-            std::string source = object.at("source");
-
-            constexpr std::string_view file_prefix = "file://";
-            if (source.starts_with(file_prefix))
-            {
-                source.erase(0, file_prefix.size());
-            }
-
-            const std::filesystem::path brep_path = source;
-
-            TopoDS_Shape shape;
-            if (!BRepTools::Read(shape, brep_path.string().c_str(), builder))
-            {
-                throw std::runtime_error(
-                    "Failed to read BREP: " + brep_path.string());
-            }
-
-            const auto &placement = object.at("placement");
-            const auto &r = placement.at("rotation");
-            const auto &p = placement.at("position");
-
-            gp_Quaternion rotation(
-                r.at(0).get<double>(),
-                r.at(1).get<double>(),
-                r.at(2).get<double>(),
-                r.at(3).get<double>());
-
-            gp_Trsf transform;
-            transform.SetRotation(rotation);
-            transform.SetTranslationPart(gp_Vec(
-                p.at(0).get<double>() * 1000.0,
-                p.at(1).get<double>() * 1000.0,
-                p.at(2).get<double>() * 1000.0));
-
-            shape.Location(TopLoc_Location(transform));
-
-            builder.Add(compound, shape);
-        }
-
-        BRepMesh_IncrementalMesh mesher(
-            compound,
-            profile.linear_deflection,
-            profile.relative,
-            profile.angular_deflection,
-            profile.parallel);
-
-        mesher.Perform();
-
-        if (!mesher.IsDone())
-        {
-            throw std::runtime_error("Failed to tessellate scene");
-        }
-
-        const TDF_Label label = shape_tool->AddShape(compound, false);
-        TDataStd_Name::Set(label, "scene");
-
-        RWGltf_CafWriter writer(output_path.c_str(), true);
-        writer.SetMergeFaces(profile.merge_faces);
-
-        auto &converter = writer.ChangeCoordinateSystemConverter();
-        converter.SetInputLengthUnit(0.001);
-
-        NCollection_IndexedDataMap<
-            TCollection_AsciiString,
-            TCollection_AsciiString>
-            metadata;
-
-        if (!writer.Perform(
-                document,
-                metadata,
-                Message_ProgressRange()))
+        if (!BRepTools::Read(shape, path.string().c_str(), builder))
         {
             throw std::runtime_error(
-                "Failed to write GLB: " + output_path);
+                "Failed to read BREP: " + path.string());
         }
+
+        return shape;
     }
 } // namespace brepkit

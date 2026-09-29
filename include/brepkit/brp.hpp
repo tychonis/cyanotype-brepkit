@@ -6,6 +6,8 @@
 
 namespace brepkit
 {
+    TopoDS_Shape LoadBrep(const std::filesystem::path &path);
+
     Placement ReadTopLevelPlacement(const std::string &path);
     void ClearTopLevelPlacement(TopoDS_Shape &shape);
     std::string SerializePlacement(const Placement &p);
