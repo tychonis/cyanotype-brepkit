@@ -273,7 +273,7 @@ int CmdGlb(int argc, char **argv)
     }
 }
 
-int CmdJpeg(int argc, char **argv)
+int CmdPpm(int argc, char **argv)
 {
     if (argc < 4)
     {
@@ -286,7 +286,7 @@ int CmdJpeg(int argc, char **argv)
 
     try
     {
-        brepkit::FileToJpeg(input_file, output_file);
+        brepkit::FileToPpm(input_file, output_file);
         return EXIT_SUCCESS;
     }
     catch (const std::exception &e)
@@ -349,9 +349,9 @@ int main(int argc, char **argv)
             return CmdGlb(argc, argv);
         }
 
-        if (cmd == "jpeg")
+        if (cmd == "ppm")
         {
-            return CmdJpeg(argc, argv);
+            return CmdPpm(argc, argv);
         }
 
         PrintUsage(argv[0]);

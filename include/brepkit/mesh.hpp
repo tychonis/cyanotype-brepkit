@@ -15,7 +15,7 @@ namespace brepkit
         const std::string &input_path,
         const std::string &output_path,
         const TessellationProfile &profile);
-    void FileToJpeg(
+    void FileToPpm(
         const std::string &input_path,
         const std::string &output_path);
     int InspectStep(const std::filesystem::path &step_path,

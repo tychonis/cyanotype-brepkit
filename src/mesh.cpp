@@ -24,6 +24,7 @@
 #include <AIS_InteractiveContext.hxx>
 #include <AIS_Shape.hxx>
 #include <Aspect_DisplayConnection.hxx>
+#include <Aspect_NeutralWindow.hxx>
 #include <Image_AlienPixMap.hxx>
 #include <OpenGl_GraphicDriver.hxx>
 #include <V3d_View.hxx>
@@ -149,7 +150,7 @@ namespace brepkit
         ShapeToGlb(compound, output_path, profile);
     }
 
-    void ShapeToJpeg(
+    void ShapeToPpm(
         const TopoDS_Shape &shape,
         const std::string &output_path,
         int width = 512,
@@ -164,21 +165,28 @@ namespace brepkit
         Handle(V3d_Viewer) viewer =
             new V3d_Viewer(driver);
 
+        Handle(V3d_View) view = viewer->CreateView();
+
+        Handle(Aspect_NeutralWindow) window =
+            new Aspect_NeutralWindow();
+
+        window->SetSize(width, height);
+        view->SetWindow(window);
+
         Handle(AIS_InteractiveContext) context =
             new AIS_InteractiveContext(viewer);
 
-        Handle(V3d_View) view = viewer->CreateView();
-
-        Handle(AIS_Shape) ais_shape =
-            new AIS_Shape(shape);
-
+        Handle(AIS_Shape) ais_shape = new AIS_Shape(shape);
         context->Display(ais_shape, false);
+        context->SetDisplayMode(ais_shape, AIS_Shaded, false);
 
-        view->SetProj(V3d_XposYnegZpos);
-        view->FitAll();
+        view->SetProj(-1.0, 1.0, 1.0);
+        view->SetUp(0.0, 1.0, 0.0);
+
+        view->SetBackgroundColor(Quantity_NOC_WHITE);
+        view->FitAll(0.05);
 
         Image_AlienPixMap image;
-
         if (!view->ToPixMap(image, width, height))
         {
             throw std::runtime_error("Failed to render shape");
@@ -187,16 +195,16 @@ namespace brepkit
         if (!image.Save(output_path.c_str()))
         {
             throw std::runtime_error(
-                "Failed to save JPEG: " + output_path);
+                "Failed to save PPM: " + output_path);
         }
     }
 
-    void FileToJpeg(
+    void FileToPpm(
         const std::string &input_path,
         const std::string &output_path)
     {
         TopoDS_Shape shape = LoadShape(input_path);
-        ShapeToJpeg(shape, output_path);
+        ShapeToPpm(shape, output_path);
     }
 
     int InspectStep(const std::filesystem::path &step_path,
