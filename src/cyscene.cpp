@@ -13,6 +13,8 @@
 #include <brepkit/type.hpp>
 #include <brepkit/brp.hpp>
 #include <brepkit/step.hpp>
+#include <brepkit/cyscene.hpp>
+#include <brepkit/mesh.hpp>
 #include <nlohmann/json.hpp>
 #include <stdexcept>
 #include <string>
@@ -21,24 +23,6 @@
 
 namespace brepkit
 {
-    TopoDS_Shape LoadShape(const std::filesystem::path &path)
-    {
-        const std::string ext = path.extension().string();
-
-        if (ext == ".brp" || ext == ".brep")
-        {
-            return LoadBrep(path);
-        }
-
-        if (ext == ".step" || ext == ".stp")
-        {
-            return LoadStep(path);
-        }
-
-        throw std::runtime_error(
-            "Unsupported shape format: " + ext);
-    }
-
     TopoDS_Shape LoadCyscene(const std::filesystem::path &input_path)
     {
         using json = nlohmann::json;
@@ -90,54 +74,5 @@ namespace brepkit
             builder.Add(compound, shape);
         }
         return compound;
-    }
-
-    void CysceneToGlb(
-        const std::string &input_path,
-        const std::string &output_path,
-        const TessellationProfile &profile)
-    {
-        TopoDS_Shape compound = LoadCyscene(input_path);
-
-        BRepMesh_IncrementalMesh mesher(
-            compound,
-            profile.linear_deflection,
-            profile.relative,
-            profile.angular_deflection,
-            profile.parallel);
-
-        mesher.Perform();
-
-        if (!mesher.IsDone())
-        {
-            throw std::runtime_error("Failed to tessellate scene");
-        }
-
-        Handle(TDocStd_Document) document =
-            new TDocStd_Document("XmlXCAF");
-        Handle(XCAFDoc_ShapeTool) shape_tool =
-            XCAFDoc_DocumentTool::ShapeTool(document->Main());
-        const TDF_Label label = shape_tool->AddShape(compound, false);
-        TDataStd_Name::Set(label, "scene");
-
-        RWGltf_CafWriter writer(output_path.c_str(), true);
-        writer.SetMergeFaces(profile.merge_faces);
-
-        auto &converter = writer.ChangeCoordinateSystemConverter();
-        converter.SetInputLengthUnit(0.001);
-
-        NCollection_IndexedDataMap<
-            TCollection_AsciiString,
-            TCollection_AsciiString>
-            metadata;
-
-        if (!writer.Perform(
-                document,
-                metadata,
-                Message_ProgressRange()))
-        {
-            throw std::runtime_error(
-                "Failed to write GLB: " + output_path);
-        }
     }
 } // namespace brepkit

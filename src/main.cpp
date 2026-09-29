@@ -12,7 +12,6 @@
 
 namespace
 {
-
     void PrintUsage(const char *argv0)
     {
         std::cerr
@@ -263,24 +262,8 @@ int CmdGlb(int argc, char **argv)
 
     try
     {
-        const auto ext = std::filesystem::path(input_file).extension();
-
-        if (ext == ".brp")
-        {
-            brepkit::BrpToGlb(
-                input_file, output_file, GetDefaultProfiles()[0]);
-        }
-        else if (ext == ".cyscene")
-        {
-            brepkit::CysceneToGlb(
-                input_file, output_file, GetDefaultProfiles()[0]);
-        }
-        else
-        {
-            throw std::runtime_error(
-                "Unsupported input format: " + ext.string());
-        }
-
+        brepkit::FileToGlb(
+            input_file, output_file, GetDefaultProfiles()[0]);
         return EXIT_SUCCESS;
     }
     catch (const std::exception &e)

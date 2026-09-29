@@ -6,5 +6,5 @@
 
 namespace brepkit
 {
-    void CysceneToGlb(const std::string &input_path, const std::string &output_path, const TessellationProfile &profile);
+    TopoDS_Shape LoadCyscene(const std::filesystem::path &input_path);
 }
