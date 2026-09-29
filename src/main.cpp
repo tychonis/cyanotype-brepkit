@@ -13,7 +13,7 @@
 namespace
 {
 
-    void print_usage(const char *argv0)
+    void PrintUsage(const char *argv0)
     {
         std::cerr
             << "Usage:\n"
@@ -21,7 +21,7 @@ namespace
             << "  " << argv0 << " export  <input.step|input.stp> <out-dir>\n";
     }
 
-    std::vector<brepkit::TessellationProfile> default_profiles()
+    std::vector<brepkit::TessellationProfile> GetDefaultProfiles()
     {
         return {
             {
@@ -56,7 +56,7 @@ namespace
         std::optional<std::string> map_file;
     };
 
-    options parse_args(int argc, char **argv)
+    options ParseArgs(int argc, char **argv)
     {
         options opts;
 
@@ -80,11 +80,11 @@ namespace
 
 } // namespace
 
-int cmd_inspect(int argc, char **argv)
+int CmdInspect(int argc, char **argv)
 {
     if (argc != 3)
     {
-        print_usage(argv[0]);
+        PrintUsage(argv[0]);
         return EXIT_FAILURE;
     }
 
@@ -92,22 +92,22 @@ int cmd_inspect(int argc, char **argv)
     const double linear_deflection = (argc >= 4) ? std::stod(argv[3]) : 0.1;
     const double angular_deflection_rad = (argc >= 5) ? std::stod(argv[4]) : 0.5;
 
-    return brepkit::run_inspect_step(path, linear_deflection, angular_deflection_rad);
+    return brepkit::InspectStep(path, linear_deflection, angular_deflection_rad);
 }
 
-int cmd_export_all(int argc, char **argv)
+int CmdExportAll(int argc, char **argv)
 {
     if (argc < 4)
     {
-        print_usage(argv[0]);
+        PrintUsage(argv[0]);
         return EXIT_FAILURE;
     }
     const std::filesystem::path out_dir = argv[3];
 
     brepkit::ExportOptions exportOpts = {
-        .profiles = default_profiles()};
+        .profiles = GetDefaultProfiles()};
 
-    auto opts = parse_args(argc, argv);
+    auto opts = ParseArgs(argc, argv);
 
     std::map<std::string, std::string> digest_map_storage;
     if (opts.map_file)
@@ -117,7 +117,7 @@ int cmd_export_all(int argc, char **argv)
     }
 
     const brepkit::ExportManifest manifest =
-        brepkit::export_step_hierarchy_glbs(argv[2], out_dir, exportOpts);
+        brepkit::ExportStepHierarchyGlbs(argv[2], out_dir, exportOpts);
 
     std::cout << "exported " << manifest.nodes.size()
               << " hierarchy nodes into " << out_dir << "\n";
@@ -125,19 +125,19 @@ int cmd_export_all(int argc, char **argv)
     return EXIT_SUCCESS;
 }
 
-int cmd_export(int argc, char **argv)
+int CmdExport(int argc, char **argv)
 {
     if (argc < 4)
     {
-        print_usage(argv[0]);
+        PrintUsage(argv[0]);
         return EXIT_FAILURE;
     }
     const std::filesystem::path out_dir = argv[3];
 
     brepkit::ExportOptions exportOpts = {
-        .profiles = default_profiles()};
+        .profiles = GetDefaultProfiles()};
 
-    auto opts = parse_args(argc, argv);
+    auto opts = ParseArgs(argc, argv);
 
     std::map<std::string, std::string> digest_map_storage;
     if (opts.map_file)
@@ -147,7 +147,7 @@ int cmd_export(int argc, char **argv)
     }
 
     const brepkit::ExportManifest manifest =
-        brepkit::export_glb(argv[2], out_dir, exportOpts);
+        brepkit::StepToGlb(argv[2], out_dir, exportOpts);
 
     std::cout << "exported " << manifest.nodes.size()
               << " hierarchy nodes into " << out_dir << "\n";
@@ -155,11 +155,11 @@ int cmd_export(int argc, char **argv)
     return EXIT_SUCCESS;
 }
 
-int cmd_location(int argc, char **argv)
+int CmdLocation(int argc, char **argv)
 {
     if (argc != 3)
     {
-        print_usage(argv[0]);
+        PrintUsage(argv[0]);
         return EXIT_FAILURE;
     }
 
@@ -179,11 +179,11 @@ int cmd_location(int argc, char **argv)
     }
 }
 
-int cmd_count(int argc, char **argv)
+int CmdCount(int argc, char **argv)
 {
     if (argc != 3)
     {
-        print_usage(argv[0]);
+        PrintUsage(argv[0]);
         return EXIT_FAILURE;
     }
 
@@ -203,11 +203,11 @@ int cmd_count(int argc, char **argv)
     }
 }
 
-int cmd_inspect_locations(int argc, char **argv)
+int CmdInspectLocations(int argc, char **argv)
 {
     if (argc != 3)
     {
-        print_usage(argv[0]);
+        PrintUsage(argv[0]);
         return EXIT_FAILURE;
     }
 
@@ -225,11 +225,11 @@ int cmd_inspect_locations(int argc, char **argv)
     }
 }
 
-int cmd_canonicalize(int argc, char **argv)
+int CmdCanonicalize(int argc, char **argv)
 {
     if (argc != 4)
     {
-        print_usage(argv[0]);
+        PrintUsage(argv[0]);
         return EXIT_FAILURE;
     }
 
@@ -250,11 +250,11 @@ int cmd_canonicalize(int argc, char **argv)
     }
 }
 
-int cmd_glb(int argc, char **argv)
+int CmdGlb(int argc, char **argv)
 {
     if (argc < 4)
     {
-        print_usage(argv[0]);
+        PrintUsage(argv[0]);
         return EXIT_FAILURE;
     }
 
@@ -268,12 +268,12 @@ int cmd_glb(int argc, char **argv)
         if (ext == ".brp")
         {
             brepkit::BrpToGlb(
-                input_file, output_file, default_profiles()[0]);
+                input_file, output_file, GetDefaultProfiles()[0]);
         }
         else if (ext == ".cyscene")
         {
             brepkit::CysceneToGlb(
-                input_file, output_file, default_profiles()[0]);
+                input_file, output_file, GetDefaultProfiles()[0]);
         }
         else
         {
@@ -294,7 +294,7 @@ int main(int argc, char **argv)
 {
     if (argc < 3)
     {
-        print_usage(argv[0]);
+        PrintUsage(argv[0]);
         return EXIT_FAILURE;
     }
 
@@ -305,45 +305,45 @@ int main(int argc, char **argv)
 
         if (cmd == "inspect")
         {
-            return cmd_inspect(argc, argv);
+            return CmdInspect(argc, argv);
         }
 
         if (cmd == "export")
         {
-            return cmd_export(argc, argv);
+            return CmdExport(argc, argv);
         }
 
         if (cmd == "location")
         {
-            return cmd_location(argc, argv);
+            return CmdLocation(argc, argv);
         }
 
         if (cmd == "count")
         {
-            return cmd_count(argc, argv);
+            return CmdCount(argc, argv);
         }
 
         if (cmd == "inspect_locations")
         {
-            return cmd_inspect_locations(argc, argv);
+            return CmdInspectLocations(argc, argv);
         }
 
         if (cmd == "canonicalize")
         {
-            return cmd_canonicalize(argc, argv);
+            return CmdCanonicalize(argc, argv);
         }
 
         if (cmd == "export_all")
         {
-            return cmd_export_all(argc, argv);
+            return CmdExportAll(argc, argv);
         }
 
         if (cmd == "glb")
         {
-            return cmd_glb(argc, argv);
+            return CmdGlb(argc, argv);
         }
 
-        print_usage(argv[0]);
+        PrintUsage(argv[0]);
         return EXIT_FAILURE;
     }
     catch (const std::exception &e)

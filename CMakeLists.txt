@@ -10,7 +10,7 @@ option(OCCT_CLI_WARNINGS_AS_ERRORS "Treat warnings as errors" OFF)
 
 add_executable(brepkit
     src/main.cpp
-    src/cli.cpp
+    src/mesh.cpp
     src/step.cpp
     src/brp.cpp
     src/cyscene.cpp

@@ -39,7 +39,7 @@ namespace brepkit
             ExportManifest manifest;
         };
 
-        std::string label_name(const TDF_Label &label)
+        std::string LabelName(const TDF_Label &label)
         {
             Handle(TDataStd_Name) nameAttr;
             if (!label.FindAttribute(TDataStd_Name::GetID(), nameAttr))
@@ -54,28 +54,28 @@ namespace brepkit
             return std::string(buf.data());
         }
 
-        std::string effective_label_name(
+        std::string EffectiveLabelName(
             const TDF_Label &label)
         {
             TDF_Label referred;
             if (g_shape_tool->GetReferredShape(label, referred))
             {
-                return label_name(referred);
+                return LabelName(referred);
             }
 
             return "";
         }
 
-        std::string label_entry_string(const TDF_Label &label)
+        std::string LabelEntryString(const TDF_Label &label)
         {
             OcctString entry;
             TDF_Tool::Entry(label, entry);
-            std::cout << entry.ToCString() << "--" << label_name(label)
-                      << "--" << effective_label_name(label) << "\n";
+            std::cout << entry.ToCString() << "--" << LabelName(label)
+                      << "--" << EffectiveLabelName(label) << "\n";
             return entry.ToCString();
         }
 
-        std::string sanitize_id(std::string s)
+        std::string SanitizeId(std::string s)
         {
             for (char &c : s)
             {
@@ -87,12 +87,12 @@ namespace brepkit
             return s;
         }
 
-        std::string node_id_from_label(const TDF_Label &label)
+        std::string NodeIdFromLabel(const TDF_Label &label)
         {
-            return label_entry_string(label);
+            return LabelEntryString(label);
         }
 
-        Handle(TDocStd_Document) make_xde_document()
+        Handle(TDocStd_Document) MakeXdeDocument()
         {
             Handle(TDocStd_Document) doc;
             Handle(XCAFApp_Application) app = XCAFApp_Application::GetApplication();
@@ -100,7 +100,7 @@ namespace brepkit
             return doc;
         }
 
-        Handle(TDocStd_Document) load_step_xde(const std::filesystem::path &step_file)
+        Handle(TDocStd_Document) LoadStepXde(const std::filesystem::path &step_file)
         {
             STEPCAFControl_Reader reader;
             const IFSelect_ReturnStatus status = reader.ReadFile(step_file.string().c_str());
@@ -109,7 +109,7 @@ namespace brepkit
                 throw std::runtime_error("failed to read STEP file");
             }
 
-            Handle(TDocStd_Document) doc = make_xde_document();
+            Handle(TDocStd_Document) doc = MakeXdeDocument();
             if (!reader.Transfer(doc))
             {
                 throw std::runtime_error("failed to transfer STEP into XDE document");
@@ -117,7 +117,7 @@ namespace brepkit
             return doc;
         }
 
-        void mesh_shape(const TopoDS_Shape &shape, const TessellationProfile &profile)
+        void MeshShape(const TopoDS_Shape &shape, const TessellationProfile &profile)
         {
             BRepMesh_IncrementalMesh mesher(
                 shape,
@@ -128,14 +128,14 @@ namespace brepkit
             (void)mesher;
         }
 
-        void export_single_shape_glb(
+        void ExportSingleShapeGlb(
             const TopoDS_Shape &shape,
             const std::filesystem::path &glb_path,
             const TessellationProfile &profile)
         {
-            mesh_shape(shape, profile);
+            MeshShape(shape, profile);
 
-            Handle(TDocStd_Document) temp_doc = make_xde_document();
+            Handle(TDocStd_Document) temp_doc = MakeXdeDocument();
             Handle(XCAFDoc_ShapeTool) temp_shapes = XCAFDoc_DocumentTool::ShapeTool(temp_doc->Main());
             g_shape_tool = temp_shapes;
 
@@ -160,7 +160,7 @@ namespace brepkit
             }
         }
 
-        std::filesystem::path get_export_path(
+        std::filesystem::path GetExportPath(
             const TessellationProfile &profile,
             const std::string &filename)
         {
@@ -169,13 +169,13 @@ namespace brepkit
                    (filename + ".glb");
         }
 
-        void export_label(
+        void ExportLabel(
             WalkCtx &ctx,
             const TessellationProfile &profile,
             const TDF_Label &label,
             const std::string &filename)
         {
-            const std::string node_id = node_id_from_label(label);
+            const std::string node_id = NodeIdFromLabel(label);
             const TopoDS_Shape shape = XCAFDoc_ShapeTool::GetShape(label);
 
             if (!shape.IsNull())
@@ -183,31 +183,31 @@ namespace brepkit
                 const std::filesystem::path abs = ctx.out_dir / (filename + ".glb");
 
                 std::filesystem::create_directories(abs.parent_path());
-                export_single_shape_glb(shape, abs, profile);
+                ExportSingleShapeGlb(shape, abs, profile);
             }
         }
 
-        void walk_label(
+        void WalkLabel(
             WalkCtx &ctx,
             const TDF_Label &label,
             const std::string &parent_id,
             const std::map<std::string, std::string> *digest_map)
         {
-            const std::string node_id = node_id_from_label(label);
+            const std::string node_id = NodeIdFromLabel(label);
             const bool is_assembly = ctx.shape_tool->IsAssembly(label);
             const TopoDS_Shape shape = XCAFDoc_ShapeTool::GetShape(label);
 
             ExportedNode node;
             node.id = node_id;
             node.parent_id = parent_id;
-            node.label_entry = label_entry_string(label);
+            node.label_entry = LabelEntryString(label);
             node.is_assembly = is_assembly;
 
             if (!shape.IsNull())
             {
                 for (const TessellationProfile &profile : ctx.profiles)
                 {
-                    std::string filename = sanitize_id(node_id);
+                    std::string filename = SanitizeId(node_id);
                     if (digest_map != nullptr)
                     {
                         auto it = digest_map->find(node_id);
@@ -216,11 +216,11 @@ namespace brepkit
                             filename = it->second;
                         }
                     }
-                    const std::filesystem::path rel = get_export_path(profile, filename);
+                    const std::filesystem::path rel = GetExportPath(profile, filename);
                     const std::filesystem::path abs = ctx.out_dir / rel;
 
                     std::filesystem::create_directories(abs.parent_path());
-                    export_single_shape_glb(shape, abs, profile);
+                    ExportSingleShapeGlb(shape, abs, profile);
 
                     node.glbs.push_back(ExportedGlb{
                         .profile = profile.name,
@@ -235,13 +235,13 @@ namespace brepkit
             {
                 for (int i = 1; i <= children.Length(); ++i)
                 {
-                    walk_label(ctx, children.Value(i), node_id, digest_map);
+                    WalkLabel(ctx, children.Value(i), node_id, digest_map);
                 }
             }
         }
     }
 
-    ExportManifest export_step_hierarchy_glbs(
+    ExportManifest ExportStepHierarchyGlbs(
         const std::filesystem::path &step_file,
         const std::filesystem::path &out_dir,
         const ExportOptions &opts)
@@ -253,7 +253,7 @@ namespace brepkit
 
         std::filesystem::create_directories(out_dir);
 
-        Handle(TDocStd_Document) doc = load_step_xde(step_file);
+        Handle(TDocStd_Document) doc = LoadStepXde(step_file);
         Handle(XCAFDoc_ShapeTool) shape_tool = XCAFDoc_DocumentTool::ShapeTool(doc->Main());
 
         WalkCtx ctx{
@@ -271,13 +271,13 @@ namespace brepkit
 
         for (int i = 1; i <= free_shapes.Length(); ++i)
         {
-            walk_label(ctx, free_shapes.Value(i), "", opts.digest_map);
+            WalkLabel(ctx, free_shapes.Value(i), "", opts.digest_map);
         }
 
         return ctx.manifest;
     }
 
-    ExportManifest export_glb(
+    ExportManifest StepToGlb(
         const std::filesystem::path &step_file,
         const std::filesystem::path &out_dir,
         const ExportOptions &opts)
@@ -289,7 +289,7 @@ namespace brepkit
 
         std::filesystem::create_directories(out_dir);
 
-        Handle(TDocStd_Document) doc = load_step_xde(step_file);
+        Handle(TDocStd_Document) doc = LoadStepXde(step_file);
         Handle(XCAFDoc_ShapeTool) shape_tool = XCAFDoc_DocumentTool::ShapeTool(doc->Main());
 
         TessellationProfile profile = opts.profiles[0];
@@ -310,10 +310,42 @@ namespace brepkit
 
         for (int i = 1; i <= free_shapes.Length(); ++i)
         {
-            export_label(ctx, profile, free_shapes.Value(i), filename + std::to_string(i));
+            ExportLabel(ctx, profile, free_shapes.Value(i), filename + std::to_string(i));
         }
 
         return ctx.manifest;
+    }
+
+    TopoDS_Shape LoadStep(const std::filesystem::path &step_path)
+    {
+        STEPControl_Reader reader;
+
+        const IFSelect_ReturnStatus status =
+            reader.ReadFile(step_path.string().c_str());
+
+        if (status != IFSelect_RetDone)
+        {
+            throw std::runtime_error("failed to read STEP file");
+        }
+
+        const int root_count = reader.NbRootsForTransfer();
+        if (root_count <= 0)
+        {
+            throw std::runtime_error("STEP file contains no transferable roots");
+        }
+
+        for (int i = 1; i <= root_count; ++i)
+        {
+            reader.TransferRoot(i);
+        }
+
+        TopoDS_Shape shape = reader.OneShape();
+        if (shape.IsNull())
+        {
+            throw std::runtime_error("STEP transfer succeeded but produced no shape");
+        }
+
+        return shape;
     }
 
 } // namespace brepkit

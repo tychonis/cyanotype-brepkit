@@ -38,12 +38,14 @@ namespace brepkit
         std::vector<ExportedNode> nodes;
     };
 
-    ExportManifest export_step_hierarchy_glbs(
+    TopoDS_Shape LoadStep(const std::filesystem::path &step_path);
+
+    ExportManifest ExportStepHierarchyGlbs(
         const std::filesystem::path &step_file,
         const std::filesystem::path &out_dir,
         const ExportOptions &opts);
 
-    ExportManifest export_glb(
+    ExportManifest StepToGlb(
         const std::filesystem::path &step_file,
         const std::filesystem::path &out_dir,
         const ExportOptions &opts);
