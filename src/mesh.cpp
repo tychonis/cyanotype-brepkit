@@ -21,6 +21,13 @@
 #include <XCAFDoc_ShapeTool.hxx>
 #include <TDataStd_Name.hxx>
 #include <RWGltf_CafWriter.hxx>
+#include <AIS_InteractiveContext.hxx>
+#include <AIS_Shape.hxx>
+#include <Aspect_DisplayConnection.hxx>
+#include <Image_AlienPixMap.hxx>
+#include <OpenGl_GraphicDriver.hxx>
+#include <V3d_View.hxx>
+#include <V3d_Viewer.hxx>
 
 #include <cstdlib>
 #include <iostream>
@@ -140,6 +147,56 @@ namespace brepkit
     {
         TopoDS_Shape compound = LoadShape(input_path);
         ShapeToGlb(compound, output_path, profile);
+    }
+
+    void ShapeToJpeg(
+        const TopoDS_Shape &shape,
+        const std::string &output_path,
+        int width = 512,
+        int height = 288)
+    {
+        Handle(Aspect_DisplayConnection) display =
+            new Aspect_DisplayConnection();
+
+        Handle(OpenGl_GraphicDriver) driver =
+            new OpenGl_GraphicDriver(display);
+
+        Handle(V3d_Viewer) viewer =
+            new V3d_Viewer(driver);
+
+        Handle(AIS_InteractiveContext) context =
+            new AIS_InteractiveContext(viewer);
+
+        Handle(V3d_View) view = viewer->CreateView();
+
+        Handle(AIS_Shape) ais_shape =
+            new AIS_Shape(shape);
+
+        context->Display(ais_shape, false);
+
+        view->SetProj(V3d_XposYnegZpos);
+        view->FitAll();
+
+        Image_AlienPixMap image;
+
+        if (!view->ToPixMap(image, width, height))
+        {
+            throw std::runtime_error("Failed to render shape");
+        }
+
+        if (!image.Save(output_path.c_str()))
+        {
+            throw std::runtime_error(
+                "Failed to save JPEG: " + output_path);
+        }
+    }
+
+    void FileToJpeg(
+        const std::string &input_path,
+        const std::string &output_path)
+    {
+        TopoDS_Shape shape = LoadShape(input_path);
+        ShapeToJpeg(shape, output_path);
     }
 
     int InspectStep(const std::filesystem::path &step_path,

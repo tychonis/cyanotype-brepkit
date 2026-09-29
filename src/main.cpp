@@ -273,6 +273,29 @@ int CmdGlb(int argc, char **argv)
     }
 }
 
+int CmdJpeg(int argc, char **argv)
+{
+    if (argc < 4)
+    {
+        PrintUsage(argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    const std::string input_file = argv[2];
+    const std::string output_file = argv[3];
+
+    try
+    {
+        brepkit::FileToJpeg(input_file, output_file);
+        return EXIT_SUCCESS;
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << "error: " << e.what() << "\n";
+        return EXIT_FAILURE;
+    }
+}
+
 int main(int argc, char **argv)
 {
     if (argc < 3)
@@ -324,6 +347,11 @@ int main(int argc, char **argv)
         if (cmd == "glb")
         {
             return CmdGlb(argc, argv);
+        }
+
+        if (cmd == "jpeg")
+        {
+            return CmdJpeg(argc, argv);
         }
 
         PrintUsage(argv[0]);
