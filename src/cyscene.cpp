@@ -12,6 +12,7 @@
 
 #include <brepkit/type.hpp>
 #include <brepkit/brp.hpp>
+#include <brepkit/step.hpp>
 #include <nlohmann/json.hpp>
 #include <stdexcept>
 #include <string>
@@ -29,35 +30,26 @@ namespace brepkit
             return LoadBrep(path);
         }
 
-        // if (ext == ".step" || ext == ".stp")
-        // {
-        //     return LoadStep(path);
-        // }
+        if (ext == ".step" || ext == ".stp")
+        {
+            return LoadStep(path);
+        }
 
         throw std::runtime_error(
             "Unsupported shape format: " + ext);
     }
 
-    void CysceneToGlb(
-        const std::string &input_path,
-        const std::string &output_path,
-        const TessellationProfile &profile)
+    TopoDS_Shape LoadCyscene(const std::filesystem::path &input_path)
     {
         using json = nlohmann::json;
 
         std::ifstream stream(input_path);
         if (!stream)
         {
-            throw std::runtime_error("Failed to read scene: " + input_path);
+            throw std::runtime_error("Failed to read scene: " + input_path.string());
         }
 
         const json scene = json::parse(stream);
-
-        Handle(TDocStd_Document) document =
-            new TDocStd_Document("XmlXCAF");
-
-        Handle(XCAFDoc_ShapeTool) shape_tool =
-            XCAFDoc_DocumentTool::ShapeTool(document->Main());
 
         BRep_Builder builder;
         TopoDS_Compound compound;
@@ -97,6 +89,15 @@ namespace brepkit
 
             builder.Add(compound, shape);
         }
+        return compound;
+    }
+
+    void CysceneToGlb(
+        const std::string &input_path,
+        const std::string &output_path,
+        const TessellationProfile &profile)
+    {
+        TopoDS_Shape compound = LoadCyscene(input_path);
 
         BRepMesh_IncrementalMesh mesher(
             compound,
@@ -112,6 +113,10 @@ namespace brepkit
             throw std::runtime_error("Failed to tessellate scene");
         }
 
+        Handle(TDocStd_Document) document =
+            new TDocStd_Document("XmlXCAF");
+        Handle(XCAFDoc_ShapeTool) shape_tool =
+            XCAFDoc_DocumentTool::ShapeTool(document->Main());
         const TDF_Label label = shape_tool->AddShape(compound, false);
         TDataStd_Name::Set(label, "scene");
 
