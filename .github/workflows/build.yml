@@ -14,16 +14,35 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Install OpenCASCADE
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libocct-data-exchange-dev \
-            libocct-visualization-dev \
-            libocct-ocaf-dev
+      - name: Cache OCCT
+        id: occt-cache
+        uses: actions/cache@v4
+        with:
+            path: ${{ runner.temp }}/occt-install
+            key: occt-8.0.0-ubuntu-24.04
 
-      - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build OCCT 8.0.0
+        if: steps.occt-cache.outputs.cache-hit != 'true'
+        run: |
+            git clone --depth 1 --branch V8_0_0 \
+            https://github.com/Open-Cascade-SAS/OCCT.git occt-src
+
+            cmake -S occt-src -B occt-build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="${{ runner.temp }}/occt-install" \
+            -DBUILD_MODULE_Draw=OFF \
+            -DBUILD_MODULE_Visualization=ON \
+            -DBUILD_MODULE_ApplicationFramework=ON \
+            -DBUILD_MODULE_DataExchange=ON
+
+            cmake --build occt-build --parallel 2
+            cmake --install occt-build
+
+      - name: Configure Brepkit
+        run: |
+            cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="${{ runner.temp }}/occt-install"
 
       - name: Build
         run: cmake --build build --config Release --parallel 2
