@@ -1,6 +1,7 @@
 #include "brepkit/mesh.hpp"
 #include "brepkit/brp.hpp"
 #include "brepkit/step.hpp"
+#include "brepkit/stl.hpp"
 #include "brepkit/cyscene.hpp"
 #include "nlohmann/json.hpp"
 
@@ -43,6 +44,11 @@ namespace brepkit
         if (ext == ".brp" || ext == ".brep")
         {
             return LoadBrep(path);
+        }
+
+        if (ext == ".stl")
+        {
+            return LoadStl(path);
         }
 
         if (ext == ".step" || ext == ".stp")
