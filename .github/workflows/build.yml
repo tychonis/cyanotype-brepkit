@@ -1,0 +1,29 @@
+
+name: Build
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install OpenCASCADE
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libocct-data-exchange-dev \
+            libocct-visualization-dev \
+            libocct-ocaf-dev
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release --parallel 2
