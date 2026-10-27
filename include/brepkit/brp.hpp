@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <filesystem>
 #include <TopoDS_Shape.hxx>
 #include <brepkit/type.hpp>
 
