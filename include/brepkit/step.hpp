@@ -39,15 +39,4 @@ namespace brepkit
     };
 
     TopoDS_Shape LoadStep(const std::filesystem::path &step_path);
-
-    ExportManifest ExportStepHierarchyGlbs(
-        const std::filesystem::path &step_file,
-        const std::filesystem::path &out_dir,
-        const ExportOptions &opts);
-
-    ExportManifest StepToGlb(
-        const std::filesystem::path &step_file,
-        const std::filesystem::path &out_dir,
-        const ExportOptions &opts);
-
 } // namespace brepkit
