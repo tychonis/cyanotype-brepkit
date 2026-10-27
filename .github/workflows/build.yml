@@ -14,6 +14,18 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Install OCCT dependencies
+        run: |
+            sudo apt-get update
+            sudo apt-get install -y \
+            libfreetype-dev \
+            libfontconfig1-dev \
+            libgl1-mesa-dev \
+            libx11-dev \
+            libxext-dev \
+            libxmu-dev \
+            libxi-dev
+
       - name: Cache OCCT
         id: occt-cache
         uses: actions/cache@v4
